@@ -164,6 +164,11 @@ function buildHorse(row, winOddsMap) {
     bodyDelta: delta,
     sex: norm(pick(row, ["性"])),
     age: n(pick(row, ["齢"])),
+    birthDate: norm(pick(row, ["生年月日"])),
+    fatherName: norm(pick(row, ["父馬名"])),
+    motherName: norm(pick(row, ["母馬名"])),
+    motherFatherName: norm(pick(row, ["母父馬名"])),
+    trainerBelong: norm(pick(row, ["調教師所属"])),
     records: {
       all: norm(allRec),
       course: norm(courseRec),
@@ -205,7 +210,7 @@ function buildRace(row) {
 async function getBuffer(url) {
   const r = await fetch(url, {
     headers: {
-      "user-agent":"Mozilla/5.0 ChappikoKeibaAI/4.0",
+      "user-agent":"Mozilla/5.0 ChappikoKeibaAI/5.0",
       "accept":"application/zip,application/octet-stream,*/*"
     }
   });
@@ -241,7 +246,7 @@ export default async function handler(req, res) {
       );
       res.setHeader("Cache-Control","s-maxage=60, stale-while-revalidate=30");
       return res.status(200).json({
-        version:"4.0",
+        version:"5.0",
         source:"NAR公式",
         tracks,
         races:grouped,
@@ -272,7 +277,7 @@ export default async function handler(req, res) {
 
     res.setHeader("Cache-Control","s-maxage=45, stale-while-revalidate=30");
     return res.status(200).json({
-      version:"4.0",
+      version:"5.0",
       source:"NAR公式",
       race,
       horses,
@@ -284,7 +289,7 @@ export default async function handler(req, res) {
     return res.status(502).json({
       error:"NARデータ取得に失敗しました",
       detail:String(e.message||e),
-      version:"4.0"
+      version:"5.0"
     });
   }
 }
