@@ -14,7 +14,7 @@
 <div class="app-shell">
   <header class="topbar">
     <div>
-      <h1>🏇 ちゃぴこ競馬AI <span class="pill">v4 FIXED</span></h1>
+      <h1>🏇 ちゃぴこ競馬AI <span class="pill">v5 HISTORY</span></h1>
       <p>中央・地方対応 / 予想・穴評価・買い目・結果学習・回収率</p>
     </div>
     <div class="top-actions">
@@ -53,9 +53,9 @@
         <div class="auto-race-box">
           <div>
             <strong>⚡ 今日の開催を自動読込</strong>
-            <p class="help">地方はNAR公式当日データから取得。競馬場とRを選ぶと出走馬欄まで自動で埋まります。</p>
+            <p class="help">地方はNAR公式当日データ＋馬出走履歴を取得。競馬場とRを選ぶと出走馬と過去3走まで自動で埋まります。</p>
           </div>
-          <button id="loadTodayBtn" class="btn good">今日の開催を取得</button>
+          <button id="loadTodayBtn" class="btn good">今日の開催＋過去3走を取得</button>
         </div>
         <div id="liveStatus" class="live-status">未取得</div>
         <div class="actions">
@@ -78,7 +78,7 @@
             <tbody></tbody>
           </table>
         </div>
-        <p class="help">評価項目は0〜10。※過去3走は真の履歴データが取れない場合は空欄のままにし、全成績指数を補助値として使います。未取得項目を0点扱いしません。</p>
+        <p class="help">評価項目は0〜10。※v5ではNAR馬出走履歴から真の過去3走を自動取得します。取得できない馬だけ全成績指数で補完し、未取得項目を0点扱いしません。</p>
       </div>
 
       <div class="card">

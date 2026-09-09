@@ -51,14 +51,122 @@ async function loadSelectedRace(){
     clearHorseInputsOnly();
     importHorses(j.horses||[]);
     horseMeta={};
-    (j.horses||[]).forEach(h=>{horseMeta[h.no]={formScore:h.formScore,dataQuality:h.dataQuality,records:h.records}});
+    (j.horses||[]).forEach(h=>{horseMeta[h.no]={
+      formScore:h.formScore,dataQuality:h.dataQuality,records:h.records,
+      birthDate:h.birthDate,fatherName:h.fatherName,motherName:h.motherName,
+      age:h.age,history:[],historyLoaded:false
+    }});
     const q=j.quality||{};
     const qText=q.runners?` / 単勝${q.odds||0}/${q.runners}頭・人気${q.popularity||0}/${q.runners}頭・馬体重${q.bodyWeight||0}/${q.runners}頭`:"";
-    liveStatus(`${j.source||"データ"} v${j.version||"4"}：${$("track").value}${$("raceNo").value}R / ${(j.horses||[]).length}頭を自動入力${qText}`,"ok");
+    liveStatus(`${j.source||"データ"} v${j.version||"5"}：${$("track").value}${$("raceNo").value}R / ${(j.horses||[]).length}頭を自動入力${qText}`,"ok");
     predict();
+    if(isLocal) await loadAllHistories(j.horses||[]);
   }catch(e){liveStatus(e.message,"err");toast(e.message)}
 }
-function clearHorseInputsOnly(){document.querySelectorAll("#horseTable tbody input").forEach(i=>i.value="")}
+function clearHorseInputsOnly(){document.querySelectorAll("#horseTable tbody input").forEach(i=>i.value="");horseMeta={};if($("historyDetails"))$("historyDetails").innerHTML="";if($("historyProgress"))$("historyProgress").textContent="未取得"}
+
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function historyCacheKey(h,beforeDate){return `history_v5_${h.name}_${h.birthDate||""}_${beforeDate||""}`}
+function historyFromCache(h,beforeDate){
+  try{
+    const x=JSON.parse(localStorage.getItem(historyCacheKey(h,beforeDate)));
+    if(!x || Date.now()-x.savedAt>6*3600*1000)return null;
+    return x.data;
+  }catch{return null}
+}
+function saveHistoryCache(h,beforeDate,data){
+  try{localStorage.setItem(historyCacheKey(h,beforeDate),JSON.stringify({savedAt:Date.now(),data}))}catch{}
+}
+function renderHistoryDetails(){
+  const box=$("historyDetails"); if(!box)return;
+  const rows=[...document.querySelectorAll("#horseTable tbody tr")];
+  const cards=[];
+  rows.forEach((tr,i)=>{
+    const name=tr.querySelector('[data-k="name"]')?.value.trim();
+    if(!name)return;
+    const m=horseMeta[i+1]||{}, hist=m.history||[];
+    const body=hist.length ? hist.map((r,idx)=>`
+      <div class="history-race">
+        <div><b>${idx===0?"前走":idx===1?"2走前":"3走前"}</b><div class="meta">${esc(r.date)}</div></div>
+        <div>${esc(r.track)} ${r.raceNo??""}R ${esc(r.raceName)}
+          <div class="meta">${r.surface||""}${r.distance??""}m / ${esc(r.going)} / ${r.popularity??"-"}人気 / ${r.time||"-"} / 上3F ${r.last3f??"-"} / ${r.bodyWeight??"-"}kg / ${esc(r.jockey)}</div>
+        </div>
+        <div class="finish">${r.finish??"-"}着</div>
+      </div>`).join("") :
+      `<div class="history-missing">${m.historyError?esc(m.historyError):(m.historyLoaded?"履歴なし":"取得待ち…")}</div>`;
+    cards.push(`<div class="history-horse ${!m.historyLoaded&&!m.historyError?"history-loading":""}">
+      <h3>${i+1}番 ${esc(name)}</h3>${body}
+    </div>`);
+  });
+  box.innerHTML=cards.join("");
+}
+async function loadOneHistory(h){
+  const beforeDate=$("raceDate").value||today();
+  const cached=historyFromCache(h,beforeDate);
+  if(cached)return cached;
+  const p=new URLSearchParams({
+    name:h.name||"",
+    birthDate:h.birthDate||"",
+    fatherName:h.fatherName||"",
+    motherName:h.motherName||"",
+    age:String(h.age||""),
+    beforeDate,
+    distance:String($("distance").value||""),
+    going:$("going").value||""
+  });
+  const data=await fetchJson("/api/nar-history?"+p.toString());
+  saveHistoryCache(h,beforeDate,data);
+  return data;
+}
+async function loadAllHistories(horses){
+  if(!horses?.length)return;
+  let done=0,ok=0;
+  $("historyProgress").textContent=`過去3走を取得中 0/${horses.length}`;
+  renderHistoryDetails();
+
+  // A small worker pool avoids hammering NAR and fits Vercel function limits.
+  let cursor=0;
+  async function worker(){
+    while(cursor<horses.length){
+      const h=horses[cursor++];
+      try{
+        const data=await loadOneHistory(h);
+        const m=horseMeta[h.no]||(horseMeta[h.no]={});
+        m.history=data.history||[];
+        m.historyLoaded=true;
+        m.historyError="";
+        if(data.derived?.recent!=null){m.historyRecent=data.derived.recent;m.formScore=data.derived.recent}
+        if(data.derived?.distance!=null){
+          const row=[...document.querySelectorAll("#horseTable tbody tr")][h.no-1];
+          const e=row?.querySelector('[data-k="distance"]'); if(e)e.value=data.derived.distance;
+        }
+        if(data.derived?.going!=null){
+          const row=[...document.querySelectorAll("#horseTable tbody tr")][h.no-1];
+          const e=row?.querySelector('[data-k="going"]'); if(e)e.value=data.derived.going;
+        }
+        const row=[...document.querySelectorAll("#horseTable tbody tr")][h.no-1];
+        const hist=data.history||[];
+        ["r1","r2","r3"].forEach((k,idx)=>{
+          const e=row?.querySelector(`[data-k="${k}"]`);
+          if(e)e.value=hist[idx]?.finish??"";
+        });
+        ok++;
+      }catch(e){
+        const m=horseMeta[h.no]||(horseMeta[h.no]={});
+        m.historyLoaded=true;m.historyError=e.message||"取得失敗";
+      }
+      done++;
+      $("historyProgress").textContent=`過去3走 ${done}/${horses.length}頭（成功 ${ok}）`;
+      renderHistoryDetails();
+      predict();
+    }
+  }
+  await Promise.all([worker(),worker(),worker()]);
+  $("historyProgress").textContent=`過去3走取得完了：${ok}/${horses.length}頭`;
+  saveDraft();
+  liveStatus(`${$("track").value}${$("raceNo").value}R：出走馬＋過去3走 ${ok}/${horses.length}頭を反映`,"ok");
+}
 
 function init(){
   for(let i=1;i<=12;i++) $("raceNo").insertAdjacentHTML("beforeend",`<option value="${i}">${i}</option>`);
@@ -89,7 +197,7 @@ function getHorses(){
       distance:v(g("distance")),course:v(g("course")),going:v(g("going")),
       front:v(g("front")),last:v(g("last")),jockey:v(g("jockey")),stable:v(g("stable")),
       body:v(g("body")),weight:v(g("weight")),pace:v(g("pace")),hole:v(g("hole")),
-      formScore:meta.formScore??null,dataQuality:meta.dataQuality||{},records:meta.records||{}
+      formScore:meta.historyRecent??meta.formScore??null,dataQuality:meta.dataQuality||{},records:meta.records||{},history:meta.history||[]
     };
   }).filter(h=>h.name);
 }
