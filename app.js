@@ -4,7 +4,7 @@ const LOCAL=["門別","盛岡","水沢","浦和","船橋","大井","川崎","金
 const CHAOS={"中山":1.05,"東京":0.95,"阪神":1,"京都":1,"中京":1.05,"札幌":1.05,"函館":1.10,"福島":1.12,"新潟":1.05,"小倉":1.10,"門別":1.18,"盛岡":1.08,"水沢":1.03,"浦和":1.10,"船橋":1.10,"大井":1.12,"川崎":1.15,"金沢":1.12,"笠松":1.00,"名古屋":1.08,"園田":1.08,"姫路":1.06,"高知":1.10,"佐賀":1.08};
 const DEFAULT_SETTINGS={weights:{recent:1.6,distance:1.3,course:1.1,going:1.2,front:1,last:1.1,jockey:1,stable:.8,body:.7,weight:.7,pace:1.1,hole:1.5},raceCap:2,pointCap:.5,skipThreshold:65};
 const LABELS={recent:"近3走",distance:"距離",course:"競馬場",going:"馬場",front:"先行",last:"末脚",jockey:"騎手",stable:"厩舎",body:"馬体重",weight:"斤量",pace:"展開",hole:"穴評価"};
-let settings=load("settings",DEFAULT_SETTINGS), lastPrediction=[], deferredPrompt=null;
+let settings=load("settings",DEFAULT_SETTINGS), lastPrediction=[], deferredPrompt=null, horseMeta={};
 const $=id=>document.getElementById(id);
 function save(k,v){localStorage.setItem("chappiko_"+k,JSON.stringify(v))}
 function load(k,d){try{const v=JSON.parse(localStorage.getItem("chappiko_"+k));return v??structuredClone(d)}catch{return structuredClone(d)}}
@@ -50,7 +50,11 @@ async function loadSelectedRace(){
     if(r.going && ["良","稍重","重","不良"].includes(r.going))$("going").value=r.going;
     clearHorseInputsOnly();
     importHorses(j.horses||[]);
-    liveStatus(`${j.source||"データ"}：${$("track").value}${$("raceNo").value}R / ${(j.horses||[]).length}頭を自動入力`,"ok");
+    horseMeta={};
+    (j.horses||[]).forEach(h=>{horseMeta[h.no]={formScore:h.formScore,dataQuality:h.dataQuality,records:h.records}});
+    const q=j.quality||{};
+    const qText=q.runners?` / 単勝${q.odds||0}/${q.runners}頭・人気${q.popularity||0}/${q.runners}頭・馬体重${q.bodyWeight||0}/${q.runners}頭`:"";
+    liveStatus(`${j.source||"データ"} v${j.version||"4"}：${$("track").value}${$("raceNo").value}R / ${(j.horses||[]).length}頭を自動入力${qText}`,"ok");
     predict();
   }catch(e){liveStatus(e.message,"err");toast(e.message)}
 }
@@ -78,14 +82,50 @@ function v(el){const n=parseFloat(el?.value);return Number.isFinite(n)?n:0}
 function getHorses(){
   return [...document.querySelectorAll("#horseTable tbody tr")].map((tr,i)=>{
     const g=k=>tr.querySelector(`[data-k="${k}"]`);
-    return {no:i+1,name:g("name").value.trim(),pop:v(g("pop")),odds:v(g("odds")),r1:v(g("r1")),r2:v(g("r2")),r3:v(g("r3")),
-    distance:v(g("distance")),course:v(g("course")),going:v(g("going")),front:v(g("front")),last:v(g("last")),jockey:v(g("jockey")),stable:v(g("stable")),body:v(g("body")),weight:v(g("weight")),pace:v(g("pace")),hole:v(g("hole"))}
+    const meta=horseMeta[i+1]||{};
+    return {
+      no:i+1,name:g("name").value.trim(),pop:v(g("pop")),odds:v(g("odds")),
+      r1:v(g("r1")),r2:v(g("r2")),r3:v(g("r3")),
+      distance:v(g("distance")),course:v(g("course")),going:v(g("going")),
+      front:v(g("front")),last:v(g("last")),jockey:v(g("jockey")),stable:v(g("stable")),
+      body:v(g("body")),weight:v(g("weight")),pace:v(g("pace")),hole:v(g("hole")),
+      formScore:meta.formScore??null,dataQuality:meta.dataQuality||{},records:meta.records||{}
+    };
   }).filter(h=>h.name);
 }
-function recent(h){if(!h.r1&&!h.r2&&!h.r3)return 0;const a=h.r1||10,b=h.r2||10,c=h.r3||10;return Math.max(0,10-((a*.5+b*.3+c*.2)-1)*.7)}
+function recent(h){
+  const actual=[h.r1,h.r2,h.r3].filter(x=>Number.isFinite(x)&&x>0);
+  if(actual.length){
+    const a=h.r1||10,b=h.r2||10,c=h.r3||10;
+    return Math.max(0,10-((a*.5+b*.3+c*.2)-1)*.7);
+  }
+  if(Number.isFinite(h.formScore) && h.formScore>0) return h.formScore;
+  return 5; // no usable history: neutral, not zero penalty
+}
 function calc(h){
-  const w=settings.weights,r=recent(h);const base=r*w.recent+h.distance*w.distance+h.course*w.course+h.going*w.going+h.front*w.front+h.last*w.last+h.jockey*w.jockey+h.stable*w.stable+h.body*w.body+h.weight*w.weight+h.pace*w.pace+h.hole*w.hole;
-  const total=base*(CHAOS[$("track").value]||1);let comment="バランス型";if(h.hole>=8&&h.pop>=6)comment="穴妙味";else if(r>=8)comment="近走安定";else if(h.pace>=8)comment="展開向き";else if(total<settings.skipThreshold)comment="見送り候補";return {...h,recent:r,base,total,comment};
+  const w=settings.weights,r=recent(h);
+  const neutral=x=>(Number.isFinite(x)&&x>0)?x:5;
+  const base=
+    r*w.recent+
+    neutral(h.distance)*w.distance+
+    neutral(h.course)*w.course+
+    neutral(h.going)*w.going+
+    neutral(h.front)*w.front+
+    neutral(h.last)*w.last+
+    neutral(h.jockey)*w.jockey+
+    neutral(h.stable)*w.stable+
+    neutral(h.body)*w.body+
+    neutral(h.weight)*w.weight+
+    neutral(h.pace)*w.pace+
+    neutral(h.hole)*w.hole;
+  const total=base*(CHAOS[$("track").value]||1);
+  let comment="バランス型";
+  if(h.hole>=8&&h.pop>=6)comment="穴妙味";
+  else if(r>=8)comment="近況良好";
+  else if(h.pace>=8)comment="展開向き";
+  else if(total<settings.skipThreshold)comment="見送り候補";
+  if(!h.r1&&!h.r2&&!h.r3&&h.formScore) comment += " / 全成績補完";
+  return {...h,recent:r,base,total,comment};
 }
 function conf(x){return x>=100?"S":x>=90?"A":x>=80?"B":x>=70?"C":"D"}
 function predict(){
@@ -125,7 +165,16 @@ function parseCSV(txt){
   return body.map(r=>Object.fromEntries(Object.keys(aliases).map(k=>[k,idx[k]>=0?r[idx[k]]:""])));
 }
 function importHorses(data){
-  const rows=[...document.querySelectorAll("#horseTable tbody tr")];data.slice(0,18).forEach((h,i)=>Object.entries(h).forEach(([k,val])=>{const e=rows[i].querySelector(`[data-k="${k}"]`);if(e)e.value=val??""}));saveDraft();toast(`${Math.min(data.length,18)}頭を読み込んだよ`)
+  const rows=[...document.querySelectorAll("#horseTable tbody tr")];
+  data.slice(0,18).forEach((h,i)=>{
+    const targetIndex=(Number(h.no)>=1&&Number(h.no)<=18)?Number(h.no)-1:i;
+    const row=rows[targetIndex]; if(!row)return;
+    Object.entries(h).forEach(([k,val])=>{
+      const e=row.querySelector(`[data-k="${k}"]`);
+      if(e)e.value=(val==null?"":val);
+    });
+  });
+  saveDraft();toast(`${Math.min(data.length,18)}頭を読み込んだよ`)
 }
 function download(name,text,type="text/plain"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)

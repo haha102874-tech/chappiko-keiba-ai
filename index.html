@@ -14,7 +14,7 @@
 <div class="app-shell">
   <header class="topbar">
     <div>
-      <h1>🏇 ちゃぴこ競馬AI <span class="pill">ONLINE</span></h1>
+      <h1>🏇 ちゃぴこ競馬AI <span class="pill">v4 FIXED</span></h1>
       <p>中央・地方対応 / 予想・穴評価・買い目・結果学習・回収率</p>
     </div>
     <div class="top-actions">
@@ -71,14 +71,14 @@
           <table class="data-table" id="horseTable">
             <thead><tr>
               <th>馬番</th><th>馬名</th><th>人気</th><th>単勝</th>
-              <th>前走</th><th>2走前</th><th>3走前</th>
+              <th>前走※</th><th>2走前※</th><th>3走前※</th>
               <th>距離</th><th>コース</th><th>馬場</th><th>先行</th><th>末脚</th>
               <th>騎手</th><th>厩舎</th><th>馬体重</th><th>斤量</th><th>展開</th><th>穴</th>
             </tr></thead>
             <tbody></tbody>
           </table>
         </div>
-        <p class="help">評価項目は0〜10。人気だけではなく、近走・距離・馬場・展開・末脚・穴評価を合成します。</p>
+        <p class="help">評価項目は0〜10。※過去3走は真の履歴データが取れない場合は空欄のままにし、全成績指数を補助値として使います。未取得項目を0点扱いしません。</p>
       </div>
 
       <div class="card">
@@ -94,7 +94,7 @@
         <div id="bets" class="bets"></div>
         <div class="table-wrap">
           <table class="data-table compact">
-            <thead><tr><th>順位</th><th>印</th><th>馬番</th><th>馬名</th><th>近3走</th><th>総合</th><th>信頼度</th><th>コメント</th></tr></thead>
+            <thead><tr><th>順位</th><th>印</th><th>馬番</th><th>馬名</th><th>近況指数</th><th>総合</th><th>信頼度</th><th>コメント</th></tr></thead>
             <tbody id="rankingBody"></tbody>
           </table>
         </div>

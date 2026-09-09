@@ -1,50 +1,26 @@
-# ちゃぴこ競馬AI v3 — 今日の開催 自動読込版
+# ちゃぴこ競馬AI v4 修正版
 
-## できること
-### 地方競馬
-Vercelにデプロイすると、アプリの「今日の開催を取得」を押すだけで:
-1. NAR公式の当日レースZIP/CSVを取得
-2. 今日の開催競馬場をプルダウン化
-3. 競馬場を選ぶと、その日のRだけを表示
-4. Rを選ぶとレース名・距離・馬場・出走馬データを自動入力
-5. NAR公式オッズCSVに単勝情報があれば人気/単勝も反映
-6. 自動評価を作り、そのまま予想を実行
+## v4で直した点
+- NAR公式「単勝」オッズを厳密に抽出し、人気・単勝は当日オッズCSVを最優先
+- 馬番で行を対応させるため、取消や欠番があってもズレにくい
+- 前走/2走前/3走前を「取得できていないのに0」と表示しない
+- 過去3走がない場合、NAR公式の「全成績」から作る補助指数を近況スコアに利用
+- 未取得のAI評価項目は0点ではなく中立値5として計算
+- 距離適性、競馬場適性、騎手、馬体重などは取得できた公式項目だけを派生評価
+- 画面上部に「単勝○/○頭、人気○/○頭、馬体重○/○頭」の取得品質を表示
+- Service Workerキャッシュをv4へ更新
 
-公式取得元:
-- https://www.keiba.go.jp/KeibaWeb/DataDownload/RaceDataDownload?type=daily
-- https://www.keiba.go.jp/KeibaWeb/DataDownload/OddsDataDownload?type=daily
+## 大事な点
+NAR当日horselistの「着順」は、真の「前走着順」と断定して使いません。
+そのため、過去3走欄は履歴データ提供元がない限り空欄です。
+この設計により「0=最悪の成績」と誤ってスコアを下げる問題を防ぎます。
 
-## 中央競馬
-JRA-VAN Data Lab.はJV-Link以外からJRA-VAN Data Lab.サーバへアクセスできないため、このWebアプリがJRA-VANサーバを直接呼ぶ実装にはしていません。
+## GitHub更新
+最も簡単なのは、このZIPを展開してリポジトリへ同じ構造で上書きアップロードすることです。
+最低限差し替えるファイル:
+- api/nar-today.js
+- app.js
+- index.html
+- sw.js
 
-中央はVercel環境変数で正規データ提供元を接続します:
-- JRA_PROVIDER_URL
-- JRA_PROVIDER_KEY (必要な場合のみ)
-
-期待するAPI:
-GET {JRA_PROVIDER_URL}/today
-=> {"source":"...","tracks":["中山"],"races":{"中山":[{"raceNo":1,...}]}}
-
-GET {JRA_PROVIDER_URL}/today?track=中山&raceNo=1
-=> {"source":"...","race":{...},"horses":[...]}
-
-horses項目はアプリ内の既存キー:
-no,name,pop,odds,r1,r2,r3,distance,course,going,front,last,jockey,stable,body,weight,pace,hole
-
-## Vercel公開手順
-1. このZIPを展開
-2. VercelでNew Project
-3. フォルダをGitHubへ置くか、Vercel CLIでデプロイ
-4. Framework PresetはOtherでOK
-5. Build Commandなし / Output Directoryなし
-6. 公開URLで「今日の開催を取得」
-
-## データの扱い
-NARデータは公式サイトが提供する一般ユーザー向けデータダウンロード機能を利用します。
-アプリ側では再配布用のデータベースを作らず、ユーザー操作時に取得して表示する設計です。
-利用規約・仕様変更に応じて接続処理の更新が必要になる場合があります。
-
-## 注意
-- APIエンドポイントの実通信はデプロイ先で行われます。
-- ChatGPT内のプレビューHTMLでは /api が存在しないため、ライブ取得は動きません。
-- 予想・利益は保証されません。
+GitHubにpush/アップロードすると、Vercelは自動再デプロイします。
