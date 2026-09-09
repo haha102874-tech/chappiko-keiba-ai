@@ -1,0 +1,11 @@
+{
+  "name": "chappiko-keiba-ai-auto",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "csv-parse": "^5.6.0",
+    "iconv-lite": "^0.6.3"
+  }
+}

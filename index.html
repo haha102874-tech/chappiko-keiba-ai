@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="ちゃぴこ競馬AI - 中央・地方対応の競馬予想PWA">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>ちゃぴこ競馬AI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div>
+      <h1>🏇 ちゃぴこ競馬AI <span class="pill">ONLINE</span></h1>
+      <p>中央・地方対応 / 予想・穴評価・買い目・結果学習・回収率</p>
+    </div>
+    <div class="top-actions">
+      <button id="installBtn" class="btn secondary hidden">アプリに追加</button>
+      <button id="themeBtn" class="btn ghost">表示切替</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="predict">予想</button>
+    <button class="tab" data-tab="import">データ読込</button>
+    <button class="tab" data-tab="results">結果保存</button>
+    <button class="tab" data-tab="dashboard">回収率</button>
+    <button class="tab" data-tab="settings">設定</button>
+  </nav>
+
+  <main>
+    <section id="predict" class="panel tabpanel active">
+      <div class="card">
+        <div class="section-title">
+          <h2>レース設定</h2>
+          <span id="saveState" class="muted">自動保存ON</span>
+        </div>
+        <div class="formgrid">
+          <label>開催区分<select id="division"><option>中央</option><option>地方</option></select></label>
+          <label>競馬場<select id="track"></select></label>
+          <label>R<select id="raceNo"></select></label>
+          <label>日付<input id="raceDate" type="date"></label>
+          <label>レース名<input id="raceName" placeholder="例：紫苑ステークス"></label>
+          <label>芝 / ダート<select id="surface"><option>芝</option><option>ダート</option></select></label>
+          <label>距離(m)<input id="distance" type="number" value="2000"></label>
+          <label>馬場<select id="going"><option>良</option><option>稍重</option><option>重</option><option>不良</option></select></label>
+          <label>想定ペース<select id="pace"><option>スロー</option><option selected>ミドル</option><option>ハイ</option></select></label>
+          <label>総資金(円)<input id="bankroll" type="number" value="50000"></label>
+        </div>
+        <div class="auto-race-box">
+          <div>
+            <strong>⚡ 今日の開催を自動読込</strong>
+            <p class="help">地方はNAR公式当日データから取得。競馬場とRを選ぶと出走馬欄まで自動で埋まります。</p>
+          </div>
+          <button id="loadTodayBtn" class="btn good">今日の開催を取得</button>
+        </div>
+        <div id="liveStatus" class="live-status">未取得</div>
+        <div class="actions">
+          <button id="predictBtn" class="btn primary">予想する</button>
+          <button id="sampleBtn" class="btn secondary">サンプル</button>
+          <button id="clearBtn" class="btn ghost">クリア</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>出走馬データ</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="horseTable">
+            <thead><tr>
+              <th>馬番</th><th>馬名</th><th>人気</th><th>単勝</th>
+              <th>前走</th><th>2走前</th><th>3走前</th>
+              <th>距離</th><th>コース</th><th>馬場</th><th>先行</th><th>末脚</th>
+              <th>騎手</th><th>厩舎</th><th>馬体重</th><th>斤量</th><th>展開</th><th>穴</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="help">評価項目は0〜10。人気だけではなく、近走・距離・馬場・展開・末脚・穴評価を合成します。</p>
+      </div>
+
+      <div class="card">
+        <h2>予想結果</h2>
+        <div class="kpis">
+          <div><small>波乱係数</small><strong id="chaos">-</strong></div>
+          <div><small>◎スコア</small><strong id="topScore">-</strong></div>
+          <div><small>判定</small><strong id="raceJudge">-</strong></div>
+          <div><small>穴候補</small><strong id="holeHorse">-</strong></div>
+          <div><small>1R上限</small><strong id="limitBet">-</strong></div>
+        </div>
+        <div id="rankCards" class="rank-cards"></div>
+        <div id="bets" class="bets"></div>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead><tr><th>順位</th><th>印</th><th>馬番</th><th>馬名</th><th>近3走</th><th>総合</th><th>信頼度</th><th>コメント</th></tr></thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="import" class="panel tabpanel">
+      <div class="card">
+        <h2>データ読込</h2>
+        <p class="help">CSV/JSONを読み込むと出走馬欄に反映します。正規の外部データAPIを契約した場合は、設定画面からAPI URLを登録できます。</p>
+        <div class="import-grid">
+          <div class="dropzone">
+            <input id="fileInput" type="file" accept=".csv,.json,application/json,text/csv">
+            <strong>CSV / JSONを選択</strong>
+            <span>または下の欄へCSVを貼り付け</span>
+          </div>
+          <div>
+            <label>CSV貼り付け<textarea id="pasteArea" rows="12" placeholder="馬番,馬名,人気,単勝,前走,2走前,3走前,距離,コース,馬場,先行,末脚,騎手,厩舎,馬体重,斤量,展開,穴"></textarea></label>
+            <div class="actions">
+              <button id="pasteImportBtn" class="btn primary">貼付データを読込</button>
+              <button id="downloadTemplateBtn" class="btn secondary">CSVひな形</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>外部API接続</h2>
+        <div class="formgrid">
+          <label>API URL<input id="apiUrl" placeholder="https://example.com/api/race"></label>
+          <label>API Key<input id="apiKey" type="password" placeholder="任意"></label>
+        </div>
+        <div class="actions">
+          <button id="apiFetchBtn" class="btn primary">APIから取得</button>
+          <button id="apiSaveBtn" class="btn secondary">接続設定を保存</button>
+        </div>
+        <p class="help">期待するJSON形式：<code>{"horses":[{"no":1,"name":"馬名",...}]}</code>。ブラウザから接続できるようCORS許可が必要です。</p>
+      </div>
+    </section>
+
+    <section id="results" class="panel tabpanel">
+      <div class="card">
+        <h2>結果を保存</h2>
+        <div class="formgrid">
+          <label>日付<input id="resultDate" type="date"></label>
+          <label>競馬場<input id="resultTrack"></label>
+          <label>R<input id="resultRaceNo" type="number" min="1" max="12"></label>
+          <label>レース名<input id="resultRaceName"></label>
+          <label>1着<input id="finish1" type="number"></label>
+          <label>2着<input id="finish2" type="number"></label>
+          <label>3着<input id="finish3" type="number"></label>
+          <label>購入額<input id="stake" type="number" value="0"></label>
+          <label>払戻額<input id="returnAmount" type="number" value="0"></label>
+          <label>メモ<input id="resultMemo" placeholder="荒れ方・反省など"></label>
+        </div>
+        <div class="actions"><button id="saveResultBtn" class="btn primary">結果を保存</button></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>保存済み結果</h2><button id="exportResultsBtn" class="btn secondary">CSV出力</button></div>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead><tr><th>日付</th><th>競馬場</th><th>R</th><th>レース</th><th>着順</th><th>購入</th><th>払戻</th><th>収支</th><th></th></tr></thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="panel tabpanel">
+      <div class="card">
+        <h2>回収率ダッシュボード</h2>
+        <div class="kpis">
+          <div><small>レース数</small><strong id="dashRaces">0</strong></div>
+          <div><small>総購入</small><strong id="dashStake">¥0</strong></div>
+          <div><small>総払戻</small><strong id="dashReturn">¥0</strong></div>
+          <div><small>収支</small><strong id="dashProfit">¥0</strong></div>
+          <div><small>ROI</small><strong id="dashROI">0%</strong></div>
+        </div>
+        <div id="trackStats" class="track-stats"></div>
+      </div>
+    </section>
+
+    <section id="settings" class="panel tabpanel">
+      <div class="card">
+        <h2>モデル設定 v2</h2>
+        <div id="weightSettings" class="settings-grid"></div>
+        <h3>資金管理</h3>
+        <div class="formgrid">
+          <label>1レース上限率<input id="raceCap" type="number" step="0.1"></label>
+          <label>1点上限率<input id="pointCap" type="number" step="0.1"></label>
+          <label>見送り閾値<input id="skipThreshold" type="number" step="1"></label>
+        </div>
+        <div class="actions">
+          <button id="saveSettingsBtn" class="btn primary">設定を保存</button>
+          <button id="resetSettingsBtn" class="btn ghost">初期値に戻す</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>データについて</h2>
+        <p class="help">このアプリ自体は競馬データを転載・再配布しません。CSV/JSON入力または利用許諾のあるAPIを接続して使う設計です。予想結果は端末内に保存されます。</p>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
