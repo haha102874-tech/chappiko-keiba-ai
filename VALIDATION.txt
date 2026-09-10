@@ -1,0 +1,9 @@
+v11.2 validation
+- Root cause fixed: openMachine() referenced missing #machineTitle and stopped before renderMain().
+- Node syntax check: app.js and all machine definition files OK.
+- Headless runtime test (isolated localStorage stub):
+  SAO2: 12 counters rendered, +1 changed 0 -> 1, 6 visual guide buttons.
+  東京喰種: 8 counters rendered, +1 changed 0 -> 1, 5 visual guide buttons.
+  戦国乙女5: 7 counters rendered, +1 changed 0 -> 1, 4 visual guide buttons.
+- mainCard visible in all three tests.
+- Service worker cache bumped to chappiko-slot-v11.2.0.
