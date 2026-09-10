@@ -1,344 +1,204 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<title>ちゃぴこスロットカウンター v11.2</title>
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="styles.css?v=11.2.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1220">
+  <meta name="description" content="ちゃぴこ競馬AI - 中央・地方対応の競馬予想PWA">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <title>ちゃぴこ競馬AI</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="machinePicker" class="picker-screen">
-  <div class="picker-inner">
-    <div class="v11-brand"><span class="v11-crown">♛</span><div><h1>ちゃぴこスロットカウンター <span class="pill v11-pill">v11.2</span></h1><div class="eyebrow">CHAPIKO SLOT COUNTER</div><p>スロットをもっと楽しく、もっと勝ちに近づく。</p></div></div><div class="picker-title-row"><h2>機種選択</h2><span>遊技する機種を選んで、すぐにカウント開始できます。</span></div>
-    <p class="muted">機種を検索・お気に入り登録して、実戦中は親指だけで高速入力。</p>
-    <div class="machine-search-box"><span>🔎</span><input id="machineSearch" placeholder="機種名で検索　例：東京喰種 / 乙女"></div>
-    <div class="picker-filters">
-      <button class="picker-filter active" data-mode="all">すべて</button>
-      <button class="picker-filter" data-mode="favorites">★ お気に入り</button>
-      <button class="picker-filter" data-mode="recent">🕘 最近使った</button>
+<div class="app-shell">
+  <header class="topbar">
+    <div>
+      <h1>🏇 ちゃぴこ競馬AI <span class="pill">v5 HISTORY</span></h1>
+      <p>中央・地方対応 / 予想・穴評価・買い目・結果学習・回収率</p>
     </div>
-    <div id="machineCards" class="machine-grid"></div><div class="tester-box">
-<label>この端末のテスター名
-<select id="testerName"><option value="はるか">はるか</option><option value="弟">弟</option></select>
-</label>
-<p class="muted tiny">データはこの端末内に保存され、もう一方の端末とは混ざりません。</p>
-</div>
-    <button id="addMachineBtn" class="secondary wide">＋ 機種を追加</button>
-  </div>
-</div>
+    <div class="top-actions">
+      <button id="installBtn" class="btn secondary hidden">アプリに追加</button>
+      <button id="themeBtn" class="btn ghost">表示切替</button>
+    </div>
+  </header>
 
-<header class="topbar hidden-app v11-topbar" id="appHeader">
-  <div class="v11-brand"><span class="v11-crown">♛</span><div><h1>ちゃぴこスロットカウンター <span class="pill v11-pill">v11.2</span></h1><div class="eyebrow">CHAPIKO SLOT COUNTER</div><p id="machineSubtitle">実戦カウンター</p></div></div>
-  <nav class="v11-global-nav" aria-label="アプリメニュー"><button type="button" data-jump="mainCard" class="active">⌂<span>ホーム</span></button><button type="button" data-jump="analysisCard">▥<span>データ分析</span></button><button type="button" id="changeMachineBtn">★<span>機種選択</span></button><button type="button" data-jump="sessionCard">⚙<span>設定</span></button></nav>
-  <div class="header-actions"><button id="saveBtn" class="ghost">保存</button></div>
-</header>
+  <nav class="tabs">
+    <button class="tab active" data-tab="predict">予想</button>
+    <button class="tab" data-tab="import">データ読込</button>
+    <button class="tab" data-tab="results">結果保存</button>
+    <button class="tab" data-tab="dashboard">回収率</button>
+    <button class="tab" data-tab="settings">設定</button>
+  </nav>
 
-<main class="wrap hidden-app" id="appMain">
-  <section class="v11-machine-stage" aria-label="機種選択">
-    <div class="v11-stage-title"><div><b>機種選択</b><span>タップで機種を切り替え</span></div><button type="button" id="v11ChangeMachine">一覧を見る</button></div>
-    <div id="v11MachineRail" class="v11-machine-rail"></div>
-  </section>
-  <nav class="quick-nav v11-feature-nav" id="machineQuickNav"></nav>
-
-  <section class="card" id="mainCard">
-    <div class="section-head formal-section-head"><div><span class="section-kicker">SMALL ROLE VISUAL NAVI</span><h2>🎰 小役ビジュアルナビ <em id="visualMachineName"></em></h2><p>リールの停止形をイラストで確認。図柄をタップすると詳細な判別ポイントを表示します。</p></div><div class="beginner-chip">🔰 初心者モード <b>ON</b></div></div>
-    <div class="dual-game-panel">
-      <div class="game-axis real-axis">
-        <span>実ゲーム数</span><b id="currentGDisplay">0G</b>
-        <div class="axis-buttons">
-          <button onclick="addGames(1)">+1</button><button onclick="addGames(10)">+10</button><button onclick="addGames(50)">+50</button>
+  <main>
+    <section id="predict" class="panel tabpanel active">
+      <div class="card">
+        <div class="section-title">
+          <h2>レース設定</h2>
+          <span id="saveState" class="muted">自動保存ON</span>
+        </div>
+        <div class="formgrid">
+          <label>開催区分<select id="division"><option>中央</option><option>地方</option></select></label>
+          <label>競馬場<select id="track"></select></label>
+          <label>R<select id="raceNo"></select></label>
+          <label>日付<input id="raceDate" type="date"></label>
+          <label>レース名<input id="raceName" placeholder="例：紫苑ステークス"></label>
+          <label>芝 / ダート<select id="surface"><option>芝</option><option>ダート</option></select></label>
+          <label>距離(m)<input id="distance" type="number" value="2000"></label>
+          <label>馬場<select id="going"><option>良</option><option>稍重</option><option>重</option><option>不良</option></select></label>
+          <label>想定ペース<select id="pace"><option>スロー</option><option selected>ミドル</option><option>ハイ</option></select></label>
+          <label>総資金(円)<input id="bankroll" type="number" value="50000"></label>
+        </div>
+        <div class="auto-race-box">
+          <div>
+            <strong>⚡ 今日の開催を自動読込</strong>
+            <p class="help">地方はNAR公式当日データ＋馬出走履歴を取得。競馬場とRを選ぶと出走馬と過去3走まで自動で埋まります。</p>
+          </div>
+          <button id="loadTodayBtn" class="btn good">今日の開催＋過去3走を取得</button>
+        </div>
+        <div id="liveStatus" class="live-status">未取得</div>
+        <div class="actions">
+          <button id="predictBtn" class="btn primary">予想する</button>
+          <button id="sampleBtn" class="btn secondary">サンプル</button>
+          <button id="clearBtn" class="btn ghost">クリア</button>
         </div>
       </div>
-      <div class="game-axis lcd-axis">
-        <span>液晶ゲーム数</span><b id="lcdGDisplay">0G</b>
-        <div class="axis-buttons">
-          <button onclick="addLcdGames(1)">+1</button><button onclick="addLcdGames(10)">+10</button><button onclick="addLcdGames(50)">+50</button>
+
+      <div class="card">
+        <h2>出走馬データ</h2>
+        <div class="table-wrap">
+          <table class="data-table" id="horseTable">
+            <thead><tr>
+              <th>馬番</th><th>馬名</th><th>人気</th><th>単勝</th>
+              <th>前走※</th><th>2走前※</th><th>3走前※</th>
+              <th>距離</th><th>コース</th><th>馬場</th><th>先行</th><th>末脚</th>
+              <th>騎手</th><th>厩舎</th><th>馬体重</th><th>斤量</th><th>展開</th><th>穴</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="help">評価項目は0〜10。※v5ではNAR馬出走履歴から真の過去3走を自動取得します。取得できない馬だけ全成績指数で補完し、未取得項目を0点扱いしません。</p>
+      </div>
+
+      <div class="card">
+        <h2>予想結果</h2>
+        <div class="kpis">
+          <div><small>波乱係数</small><strong id="chaos">-</strong></div>
+          <div><small>◎スコア</small><strong id="topScore">-</strong></div>
+          <div><small>判定</small><strong id="raceJudge">-</strong></div>
+          <div><small>穴候補</small><strong id="holeHorse">-</strong></div>
+          <div><small>1R上限</small><strong id="limitBet">-</strong></div>
+        </div>
+        <div id="rankCards" class="rank-cards"></div>
+        <div id="bets" class="bets"></div>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead><tr><th>順位</th><th>印</th><th>馬番</th><th>馬名</th><th>近況指数</th><th>総合</th><th>信頼度</th><th>コメント</th></tr></thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
         </div>
       </div>
-    </div>
-    <div class="sync-row">
-      <label><input id="syncGames" type="checkbox" checked> 通常消化時は「実G」と「液晶G」を一緒に進める</label>
-      <button id="resetLcdBtn" class="secondary">液晶Gを0に</button>
-    </div>
-    <div class="koyaku-game-entry">
-      <label>実G
-        <input id="koyakuGame" type="number" min="0" placeholder="空欄なら現在実G">
-      </label>
-      <label>液晶G
-        <input id="koyakuLcdGame" type="number" min="0" placeholder="空欄なら現在液晶G">
-      </label>
-      <button id="useCurrentGameBtn" class="secondary">現在値セット</button>
-    </div>
-    <div id="mainCounters" class="counter-grid onehand-counters"></div>
-    <div class="section-head subhead"><h3>小役出現履歴</h3><button id="clearKoyakuHistory" class="secondary">履歴クリア</button></div>
-    <div id="koyakuHistory" class="timeline"></div>
-  </section>
+    </section>
 
-  <section class="card" id="sessionCard">
-    <div class="section-head"><h2>実戦データ</h2><span id="savedState" class="muted">自動保存ON</span></div>
-    <div class="grid">
-      <label>日付<input id="playDate" type="date"></label>
-      <label>ホール<input id="hall" placeholder="任意"></label>
-      <label>台番号<input id="machineNo" inputmode="numeric" placeholder="任意"></label>
-      <label>現在G<input id="games" type="number" min="0" value="0"></label>
-      <label>投資(円)<input id="invest" type="number" min="0" step="1000" value="0"></label>
-      <label>回収(円)<input id="returnYen" type="number" min="0" step="1000" value="0"></label>
-    </div>
-
-    <div class="game-pad">
-      <div class="game-pad-label">G数クイック加算</div>
-      <div class="game-buttons">
-        <button onclick="addGames(1)">＋1G</button>
-        <button onclick="addGames(10)">＋10G</button>
-        <button onclick="addGames(50)" class="primary-big">＋50G</button>
-        <button onclick="addGames(-1)" class="minus">−1G</button>
-        <button onclick="addGames(-10)" class="minus">−10G</button>
-        <button onclick="addGames(-50)" class="minus">−50G</button>
+    <section id="import" class="panel tabpanel">
+      <div class="card">
+        <h2>データ読込</h2>
+        <p class="help">CSV/JSONを読み込むと出走馬欄に反映します。正規の外部データAPIを契約した場合は、設定画面からAPI URLを登録できます。</p>
+        <div class="import-grid">
+          <div class="dropzone">
+            <input id="fileInput" type="file" accept=".csv,.json,application/json,text/csv">
+            <strong>CSV / JSONを選択</strong>
+            <span>または下の欄へCSVを貼り付け</span>
+          </div>
+          <div>
+            <label>CSV貼り付け<textarea id="pasteArea" rows="12" placeholder="馬番,馬名,人気,単勝,前走,2走前,3走前,距離,コース,馬場,先行,末脚,騎手,厩舎,馬体重,斤量,展開,穴"></textarea></label>
+            <div class="actions">
+              <button id="pasteImportBtn" class="btn primary">貼付データを読込</button>
+              <button id="downloadTemplateBtn" class="btn secondary">CSVひな形</button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+      <div class="card">
+        <h2>外部API接続</h2>
+        <div class="formgrid">
+          <label>API URL<input id="apiUrl" placeholder="https://example.com/api/race"></label>
+          <label>API Key<input id="apiKey" type="password" placeholder="任意"></label>
+        </div>
+        <div class="actions">
+          <button id="apiFetchBtn" class="btn primary">APIから取得</button>
+          <button id="apiSaveBtn" class="btn secondary">接続設定を保存</button>
+        </div>
+        <p class="help">期待するJSON形式：<code>{"horses":[{"no":1,"name":"馬名",...}]}</code>。ブラウザから接続できるようCORS許可が必要です。</p>
+      </div>
+    </section>
 
-    <div class="summary-strip">
-      <div><span>収支</span><b id="profit">0円</b></div>
-      <div><span>CZ</span><b id="czRate">1/—</b></div>
-      <div><span>AT</span><b id="atRate">1/—</b></div>
-      <div><span>参考判別</span><b id="settingHeadline">データ不足</b></div>
-    </div>
-  </section>
+    <section id="results" class="panel tabpanel">
+      <div class="card">
+        <h2>結果を保存</h2>
+        <div class="formgrid">
+          <label>日付<input id="resultDate" type="date"></label>
+          <label>競馬場<input id="resultTrack"></label>
+          <label>R<input id="resultRaceNo" type="number" min="1" max="12"></label>
+          <label>レース名<input id="resultRaceName"></label>
+          <label>1着<input id="finish1" type="number"></label>
+          <label>2着<input id="finish2" type="number"></label>
+          <label>3着<input id="finish3" type="number"></label>
+          <label>購入額<input id="stake" type="number" value="0"></label>
+          <label>払戻額<input id="returnAmount" type="number" value="0"></label>
+          <label>メモ<input id="resultMemo" placeholder="荒れ方・反省など"></label>
+        </div>
+        <div class="actions"><button id="saveResultBtn" class="btn primary">結果を保存</button></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>保存済み結果</h2><button id="exportResultsBtn" class="btn secondary">CSV出力</button></div>
+        <div class="table-wrap">
+          <table class="data-table compact">
+            <thead><tr><th>日付</th><th>競馬場</th><th>R</th><th>レース</th><th>着順</th><th>購入</th><th>払戻</th><th>収支</th><th></th></tr></thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-  <section class="card" id="machineSpecificCard">
-    <div class="section-head"><h2 id="machineSpecificTitle">機種専用カウンター</h2><span class="muted">機種ごとの判別要素</span></div>
-    <div id="machineSpecificCounters" class="counter-grid onehand-counters"></div>
-    <div class="section-head subhead"><h3>示唆・終了画面</h3><span class="muted">ワンタップ記録</span></div>
-    <div id="machineHints" class="event-grid"></div>
-  </section>
+    <section id="dashboard" class="panel tabpanel">
+      <div class="card">
+        <h2>回収率ダッシュボード</h2>
+        <div class="kpis">
+          <div><small>レース数</small><strong id="dashRaces">0</strong></div>
+          <div><small>総購入</small><strong id="dashStake">¥0</strong></div>
+          <div><small>総払戻</small><strong id="dashReturn">¥0</strong></div>
+          <div><small>収支</small><strong id="dashProfit">¥0</strong></div>
+          <div><small>ROI</small><strong id="dashROI">0%</strong></div>
+        </div>
+        <div id="trackStats" class="track-stats"></div>
+      </div>
+    </section>
 
-
-  <section class="card hint-navigator" id="hintNavigatorCard">
-    <div class="section-head"><h2>🧭 示唆ナビ</h2><span class="pill">v9.2</span></div>
-    <p class="note">終了画面・PUSHボイス・スタンプなどを記録すると、設定示唆とモード示唆を分けて現在状況を表示します。未解析は「調査中」のまま扱います。</p>
-    <div class="hint-current-grid">
-      <div class="hint-current-box"><span>設定示唆</span><b id="hintCurrentSetting">まだ記録なし</b></div>
-      <div class="hint-current-box"><span>モード / 状態</span><b id="hintCurrentMode">まだモード示唆なし</b></div>
-    </div>
-    <div class="hint-latest" id="hintLatest"></div>
-    <div class="section-head subhead"><h3>示唆履歴</h3><span class="muted">最新12件</span></div>
-    <div id="hintHistory" class="hint-history"></div>
-  </section>
-
-  <section class="card" id="czCard">
-    <div class="section-head"><h2>CZ当選履歴</h2><span class="muted">当選契機まで記録</span></div>
-    <div class="cz-entry">
-      <label>当選 実G<input id="czGame" type="number" min="0" placeholder="現在実G"></label>
-      <label>当選 液晶G<input id="czLcdGame" type="number" min="0" placeholder="現在液晶G"></label>
-      <label>当選契機
-        <select id="czTrigger">
-          <option>規定ゲーム数</option>
-          <option>強チェリー</option>
-          <option>強チャンス目</option>
-          <option>スイカ／SC経由</option>
-          <option>レア役その他</option>
-          <option>THE END状態</option>
-          <option>不明</option>
-        </select>
-      </label>
-      <label>結果
-        <select id="czResult">
-          <option value="hit">AT当選</option>
-          <option value="fail">失敗</option>
-          <option value="end">THE END</option>
-        </select>
-      </label>
-      <button id="addCzBtn">＋ CZ履歴に追加</button>
-    </div>
-    <div id="czHistory" class="timeline"></div>
-  </section>
-
-  <section class="card" id="scCard">
-    <div class="section-head"><h2>シューティングチャージ</h2><span class="muted">液晶G数の加算まで記録</span></div>
-
-    <div class="sc-live">
-      <div><span>SC開始 実G</span><b id="scStartDisplay">—</b></div>
-      <div><span>SC開始 液晶G</span><b id="scStartLcdDisplay">—</b></div>
-      <div><span>現在 液晶G</span><b id="scDisplayGame">0G</b></div>
-      <div><span>今回の加算</span><b id="scAddDisplay">+0G</b></div>
-    </div>
-
-    <div class="sc-controls">
-      <button id="startScBtn" class="sc-start">SC開始</button>
-      <button data-scadd="5">+5G</button>
-      <button data-scadd="10">+10G</button>
-      <button data-scadd="20">+20G</button>
-      <button data-scadd="30">+30G</button>
-      <button data-scadd="50">+50G</button>
-      <button data-scadd="100">+100G</button>
-      <button id="customScBtn" class="secondary">任意入力</button>
-    </div>
-
-    <div class="sc-detail">
-      <label>液晶G数を直接入力
-        <input id="scDisplayInput" type="number" min="0" placeholder="例 186">
-      </label>
-      <label>加算契機
-        <select id="scTrigger">
-          <option>スイカ</option>
-          <option>弱チェリー</option>
-          <option>強チェリー</option>
-          <option>弱チャンス目</option>
-          <option>強チャンス目</option>
-          <option>その他</option>
-          <option>不明</option>
-        </select>
-      </label>
-      <label>メモ
-        <input id="scMemo" placeholder="色・演出など">
-      </label>
-      <button id="saveScBtn">SC記録</button>
-    </div>
-
-    <div class="section-head subhead"><h3>SC履歴</h3><span class="muted">小役との関連も自動判定</span></div>
-    <div id="scHistory" class="timeline"></div>
-  </section>
-
-  <section class="card" id="ggoCard">
-    <div class="section-head"><h2>GGOモード アイテム</h2><span class="muted">色と種類をタップ記録</span></div>
-    <p class="note">アイテムはGGOモードの示唆用。設定示唆とは別に履歴化します。</p>
-    <div class="ggo-types">
-      <button class="ggo-type active" data-item="光剣">⚔️ 光剣<br><small>キリト示唆</small></button>
-      <button class="ggo-type" data-item="アミュスフィア">◉ アミュスフィア<br><small>詩乃示唆</small></button>
-      <button class="ggo-type" data-item="ヘカートⅡ">🎯 ヘカートⅡ<br><small>シノン示唆</small></button>
-      <button class="ggo-type" data-item="黒星">★ 黒星<br><small>死銃示唆</small></button>
-      <button class="ggo-type" data-item="バギー">🏍 バギー<br><small>複合示唆</small></button>
-    </div>
-    <div class="ggo-colors">
-      <button data-color="青" class="blue">青</button>
-      <button data-color="緑" class="green">緑</button>
-      <button data-color="赤" class="red">赤</button>
-    </div>
-    <div id="ggoHistory" class="timeline"></div>
-  </section>
-
-  <section class="card" id="conditionalCard">
-    <div class="section-head"><h2>設定差のある抽選</h2><span class="muted">分母と当選を別々に記録</span></div>
-    <div id="conditionalCounters" class="condition-grid"></div>
-  </section>
-
-  <section class="card" id="screenCard">
-    <div class="section-head"><h2>AT終了画面</h2><span class="muted">画像カード風で判別</span></div>
-    <div id="endScreens" class="screen-grid"></div>
-  </section>
-
-  <section class="card" id="trophyCard">
-    <div class="section-head"><h2>コパンダトロフィー</h2><span class="muted">確定系を記録</span></div>
-    <div id="trophies" class="event-grid small"></div>
-  </section>
-
-  <section class="card" id="miniCard">
-    <div class="section-head"><h2>ミニキャラ示唆</h2><span class="muted">エンディング／マザーズ・ロザリオ</span></div>
-    <div class="tabs">
-      <button class="tab active" data-tab="ending">エンディング</button>
-      <button class="tab" data-tab="rosario">マザーズ・ロザリオ</button>
-    </div>
-    <div id="miniEnding" class="event-grid"></div>
-    <div id="miniRosario" class="event-grid hidden"></div>
-  </section>
-
-  <section class="card" id="linkCard">
-    <div class="section-head"><h2>当選契機 自動判定</h2><span class="muted">直前の小役から候補を抽出</span></div>
-    <div class="link-settings">
-      <label>小役→CZ/SC/ATの関連を見る範囲
-        <select id="linkWindow">
-          <option value="3">3G以内</option>
-          <option value="5" selected>5G以内</option>
-          <option value="8">8G以内</option>
-          <option value="10">10G以内</option>
-          <option value="15">15G以内</option>
-        </select>
-      </label>
-    </div>
-    <div id="autoLinks" class="auto-links"></div>
-    <p class="note">※「可能性」は入力時系列からの候補表示です。内部抽選の断定ではありません。</p>
-  </section>
-
-  <section class="card">
-    <div class="section-head"><h2>設定比較</h2><span class="muted">公表値＋入力データからの参考スコア</span></div>
-    <div id="settingBars" class="setting-bars"></div>
-    <p class="note">※簡易比較です。設定を断定する機能ではありません。少ないサンプルでは大きくブレます。</p>
-  </section>
-
-  <section class="card">
-    <div class="section-head"><h2>実戦メモ</h2></div>
-    <textarea id="memo" rows="4" placeholder="挙動、GGOモード、気になった演出など"></textarea>
-  </section>
-
-  <section class="card" id="dashboardCard">
-    <div class="section-head"><h2>実戦解析ダッシュボード</h2><span class="muted">機種別＋全体集計</span></div>
-    <div id="platformStats" class="platform-stats"></div>
-    <div class="section-head subhead"><h3>機種別成績</h3><span class="muted">保存済み実戦から集計</span></div>
-    <div id="machineStats" class="machine-stats"></div>
-  </section>
-
-  <section class="card" id="timelineCard">
-    <div class="section-head"><h2>統合タイムライン</h2><span class="muted">実G / 液晶Gを完全分離</span></div>
-    <div class="timeline-filter">
-      <button class="tl-filter active" data-filter="all">すべて</button>
-      <button class="tl-filter" data-filter="koyaku">小役</button>
-      <button class="tl-filter" data-filter="sc">SC</button>
-      <button class="tl-filter" data-filter="cz">CZ/AT</button>
-      <button class="tl-filter" data-filter="ggo">GGO</button>
-    </div>
-    <div id="unifiedTimeline" class="unified-timeline"></div>
-  </section>
-
-  <section class="card" id="historyCard">
-    <div class="section-head">
-      <h2>実戦履歴一覧</h2>
-      <button id="archiveBtn" class="secondary">この実戦を履歴保存</button>
-    </div>
-    <div id="sessionHistory" class="session-history"></div>
-  </section>
-
-  <section class="card">
-    <div class="section-head"><h2>データ管理</h2></div>
-    <div class="actions-row">
-      <button id="exportBtn">JSONを書き出す</button>
-      <label class="file-btn">JSONを読み込む<input id="importFile" type="file" accept="application/json"></label>
-      <button id="newSessionBtn" class="secondary">新しい実戦</button>
-      <button id="resetBtn" class="danger ghost">現在データをリセット</button>
-    </div>
-  </section>
-</main>
-<div id="koyakuGuideModal" class="modal hidden"><div class="modal-card" id="koyakuGuideContent"></div></div>
-<button id="feedbackFab" class="feedback-fab hidden-app">✍️ 改善メモ</button>
-<div id="feedbackModal" class="modal hidden"><div class="modal-card">
-<div class="section-head"><h2>実戦中の改善メモ</h2><button id="closeFeedback">×</button></div>
-<label>種類<select id="feedbackType"><option>押しにくい</option><option>分かりにくい</option><option>欲しい機能</option><option>不具合</option><option>その他</option></select></label>
-<label>メモ<textarea id="feedbackText" rows="4" placeholder="例：CZボタンをもっと右に置きたい"></textarea></label>
-<div class="button-row"><button id="saveFeedback">この端末に保存</button></div>
-<div id="feedbackList" class="history-list"></div>
-</div></div>
-<div id="thumbDock" class="thumb-dock hidden-app"></div>
-
-<footer class="hidden-app" id="appFooter">
-  <p>実戦記録・分析用ツール。小役図柄は判別補助用のオリジナル簡易イラストです。</p>
-</footer>
-
-<div id="modal" class="modal hidden">
-  <div class="modal-box">
-    <h2>機種を追加</h2>
-    <p class="muted">登録した機種は汎用カウンターとして利用できます。専用項目は機種定義から追加できます。</p>
-    <label>機種名<input id="newMachineName" placeholder="例：L○○○"></label>
-    <div class="actions-row"><button id="confirmAddMachine">追加</button><button id="closeModal" class="secondary">キャンセル</button></div>
-  </div>
+    <section id="settings" class="panel tabpanel">
+      <div class="card">
+        <h2>モデル設定 v2</h2>
+        <div id="weightSettings" class="settings-grid"></div>
+        <h3>資金管理</h3>
+        <div class="formgrid">
+          <label>1レース上限率<input id="raceCap" type="number" step="0.1"></label>
+          <label>1点上限率<input id="pointCap" type="number" step="0.1"></label>
+          <label>見送り閾値<input id="skipThreshold" type="number" step="1"></label>
+        </div>
+        <div class="actions">
+          <button id="saveSettingsBtn" class="btn primary">設定を保存</button>
+          <button id="resetSettingsBtn" class="btn ghost">初期値に戻す</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>データについて</h2>
+        <p class="help">このアプリ自体は競馬データを転載・再配布しません。CSV/JSON入力または利用許諾のあるAPIを接続して使う設計です。予想結果は端末内に保存されます。</p>
+      </div>
+    </section>
+  </main>
 </div>
-
-<script src="machine-registry.js?v=11.2.0"></script>
-<script src="machines/sao2.js?v=11.2.0"></script>
-<script src="machines/tokyo-ghoul.js?v=11.2.0"></script>
-<script src="machines/otome5.js?v=11.2.0"></script>
-<script src="machines/vividred.js?v=11.2.0"></script>
-<script src="machines/generic.js?v=11.2.0"></script>
-<script src="app.js?v=11.2.0"></script>
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
 </body>
 </html>
